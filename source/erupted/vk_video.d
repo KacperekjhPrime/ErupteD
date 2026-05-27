@@ -38,6 +38,7 @@ enum STD_VIDEO_H264_SCALING_LIST_8X8_NUM_LISTS = 6;
 enum STD_VIDEO_H264_SCALING_LIST_8X8_NUM_ELEMENTS = 64;
 enum STD_VIDEO_H264_MAX_NUM_LIST_REF = 32;
 enum STD_VIDEO_H264_MAX_CHROMA_PLANES = 2;
+enum STD_VIDEO_H264_NO_REFERENCE_PICTURE = 0xFF;
 
 enum StdVideoH264ChromaFormatIdc {
     STD_VIDEO_H264_CHROMA_FORMAT_IDC_MONOCHROME  = 0,
@@ -448,10 +449,9 @@ struct StdVideoDecodeH264ReferenceInfo {
 // - vulkan_video_codec_h264std_encode -
 enum vulkan_video_codec_h264std_encode = 1;
 
-// Vulkan 0.9 provisional Vulkan video H.264 encode std specification version number
-enum VK_STD_VULKAN_VIDEO_CODEC_H264_ENCODE_API_VERSION_0_9_9 = VK_MAKE_VIDEO_STD_VERSION( 0, 9, 9 );
+enum VK_STD_VULKAN_VIDEO_CODEC_H264_ENCODE_API_VERSION_1_0_0 = VK_MAKE_VIDEO_STD_VERSION( 1, 0, 0 );
 
-enum VK_STD_VULKAN_VIDEO_CODEC_H264_ENCODE_SPEC_VERSION = VK_STD_VULKAN_VIDEO_CODEC_H264_ENCODE_API_VERSION_0_9_9;
+enum VK_STD_VULKAN_VIDEO_CODEC_H264_ENCODE_SPEC_VERSION = VK_STD_VULKAN_VIDEO_CODEC_H264_ENCODE_API_VERSION_1_0_0;
 enum const( char )* VK_STD_VULKAN_VIDEO_CODEC_H264_ENCODE_EXTENSION_NAME = "VK_STD_vulkan_video_codec_h264_encode";
 
 struct StdVideoEncodeH264WeightTableFlags {
@@ -494,7 +494,7 @@ struct StdVideoEncodeH264RefListModEntry {
 }
 
 struct StdVideoEncodeH264RefPicMarkingEntry {
-    StdVideoH264MemMgmtControlOp  operation;
+    StdVideoH264MemMgmtControlOp  memory_management_control_operation;
     uint16_t                      difference_of_pic_nums_minus1;
     uint16_t                      long_term_pic_num;
     uint16_t                      long_term_frame_idx;
@@ -503,51 +503,52 @@ struct StdVideoEncodeH264RefPicMarkingEntry {
 
 struct StdVideoEncodeH264ReferenceListsInfo {
     StdVideoEncodeH264ReferenceListsInfoFlags       flags;
-    uint8_t                                         refPicList0EntryCount;
-    uint8_t                                         refPicList1EntryCount;
+    uint8_t                                         num_ref_idx_l0_active_minus1;
+    uint8_t                                         num_ref_idx_l1_active_minus1;
+    uint8_t[STD_VIDEO_H264_MAX_NUM_LIST_REF]        RefPicList0;
+    uint8_t[STD_VIDEO_H264_MAX_NUM_LIST_REF]        RefPicList1;
     uint8_t                                         refList0ModOpCount;
     uint8_t                                         refList1ModOpCount;
     uint8_t                                         refPicMarkingOpCount;
     uint8_t[7]                                      reserved1;
-    const( uint8_t )*                               pRefPicList0Entries;
-    const( uint8_t )*                               pRefPicList1Entries;
     const( StdVideoEncodeH264RefListModEntry )*     pRefList0ModOperations;
     const( StdVideoEncodeH264RefListModEntry )*     pRefList1ModOperations;
     const( StdVideoEncodeH264RefPicMarkingEntry )*  pRefPicMarkingOperations;
 }
 
 struct StdVideoEncodeH264PictureInfo {
-    StdVideoEncodeH264PictureInfoFlags  flags;
-    uint8_t                             seq_parameter_set_id;
-    uint8_t                             pic_parameter_set_id;
-    uint16_t                            reserved1;
-    StdVideoH264PictureType             pictureType;
-    uint32_t                            frame_num;
-    int32_t                             PicOrderCnt;
+    StdVideoEncodeH264PictureInfoFlags              flags;
+    uint8_t                                         seq_parameter_set_id;
+    uint8_t                                         pic_parameter_set_id;
+    uint16_t                                        idr_pic_id;
+    StdVideoH264PictureType                         primary_pic_type;
+    uint32_t                                        frame_num;
+    int32_t                                         PicOrderCnt;
+    uint8_t                                         temporal_id;
+    uint8_t[3]                                      reserved1;
+    const( StdVideoEncodeH264ReferenceListsInfo )*  pRefLists;
 }
 
 struct StdVideoEncodeH264ReferenceInfo {
     StdVideoEncodeH264ReferenceInfoFlags  flags;
-    StdVideoH264PictureType               pictureType;
+    StdVideoH264PictureType               primary_pic_type;
     uint32_t                              FrameNum;
     int32_t                               PicOrderCnt;
     uint16_t                              long_term_pic_num;
     uint16_t                              long_term_frame_idx;
+    uint8_t                               temporal_id;
 }
 
 struct StdVideoEncodeH264SliceHeader {
     StdVideoEncodeH264SliceHeaderFlags       flags;
     uint32_t                                 first_mb_in_slice;
     StdVideoH264SliceType                    slice_type;
-    uint16_t                                 idr_pic_id;
-    uint8_t                                  num_ref_idx_l0_active_minus1;
-    uint8_t                                  num_ref_idx_l1_active_minus1;
-    StdVideoH264CabacInitIdc                 cabac_init_idc;
-    StdVideoH264DisableDeblockingFilterIdc   disable_deblocking_filter_idc;
     int8_t                                   slice_alpha_c0_offset_div2;
     int8_t                                   slice_beta_offset_div2;
-    uint16_t                                 reserved1;
-    uint32_t                                 reserved2;
+    int8_t                                   slice_qp_delta;
+    uint8_t                                  reserved1;
+    StdVideoH264CabacInitIdc                 cabac_init_idc;
+    StdVideoH264DisableDeblockingFilterIdc   disable_deblocking_filter_idc;
     const( StdVideoEncodeH264WeightTable )*  pWeightTable;
 }
 
@@ -577,6 +578,7 @@ enum STD_VIDEO_H265_MAX_CHROMA_PLANES = 2;
 enum STD_VIDEO_H265_MAX_SHORT_TERM_REF_PIC_SETS = 64;
 enum STD_VIDEO_H265_MAX_LONG_TERM_PICS = 16;
 enum STD_VIDEO_H265_MAX_DELTA_POC = 48;
+enum STD_VIDEO_H265_NO_REFERENCE_PICTURE = 0xFF;
 
 enum StdVideoH265ChromaFormatIdc {
     STD_VIDEO_H265_CHROMA_FORMAT_IDC_MONOCHROME  = 0,
@@ -978,10 +980,9 @@ struct StdVideoDecodeH265ReferenceInfo {
 // - vulkan_video_codec_h265std_encode -
 enum vulkan_video_codec_h265std_encode = 1;
 
-// Vulkan 0.9 provisional Vulkan video H.265 encode std specification version number
-enum VK_STD_VULKAN_VIDEO_CODEC_H265_ENCODE_API_VERSION_0_9_10 = VK_MAKE_VIDEO_STD_VERSION( 0, 9, 10 );
+enum VK_STD_VULKAN_VIDEO_CODEC_H265_ENCODE_API_VERSION_1_0_0 = VK_MAKE_VIDEO_STD_VERSION( 1, 0, 0 );
 
-enum VK_STD_VULKAN_VIDEO_CODEC_H265_ENCODE_SPEC_VERSION = VK_STD_VULKAN_VIDEO_CODEC_H265_ENCODE_API_VERSION_0_9_10;
+enum VK_STD_VULKAN_VIDEO_CODEC_H265_ENCODE_SPEC_VERSION = VK_STD_VULKAN_VIDEO_CODEC_H265_ENCODE_API_VERSION_1_0_0;
 enum const( char )* VK_STD_VULKAN_VIDEO_CODEC_H265_ENCODE_EXTENSION_NAME = "VK_STD_vulkan_video_codec_h265_encode";
 
 struct StdVideoEncodeH265WeightTableFlags {
@@ -1008,35 +1009,22 @@ struct StdVideoEncodeH265WeightTable {
 struct StdVideoEncodeH265SliceSegmentHeaderFlags {
 }
 
-struct StdVideoEncodeH265SliceSegmentLongTermRefPics {
-    uint8_t                                               num_long_term_sps;
-    uint8_t                                               num_long_term_pics;
-    uint8_t[ STD_VIDEO_H265_MAX_LONG_TERM_REF_PICS_SPS ]  lt_idx_sps;
-    uint8_t[ STD_VIDEO_H265_MAX_LONG_TERM_PICS ]          poc_lsb_lt;
-    uint16_t                                              used_by_curr_pic_lt_flag;
-    uint8_t[ STD_VIDEO_H265_MAX_DELTA_POC ]               delta_poc_msb_present_flag;
-    uint8_t[ STD_VIDEO_H265_MAX_DELTA_POC ]               delta_poc_msb_cycle_lt;
-}
-
 struct StdVideoEncodeH265SliceSegmentHeader {
-    StdVideoEncodeH265SliceSegmentHeaderFlags                flags;
-    StdVideoH265SliceType                                    slice_type;
-    uint32_t                                                 slice_segment_address;
-    uint8_t                                                  short_term_ref_pic_set_idx;
-    uint8_t                                                  collocated_ref_idx;
-    uint8_t                                                  num_ref_idx_l0_active_minus1;
-    uint8_t                                                  num_ref_idx_l1_active_minus1;
-    uint8_t                                                  MaxNumMergeCand;
-    int8_t                                                   slice_cb_qp_offset;
-    int8_t                                                   slice_cr_qp_offset;
-    int8_t                                                   slice_beta_offset_div2;
-    int8_t                                                   slice_tc_offset_div2;
-    int8_t                                                   slice_act_y_qp_offset;
-    int8_t                                                   slice_act_cb_qp_offset;
-    int8_t                                                   slice_act_cr_qp_offset;
-    const( StdVideoH265ShortTermRefPicSet )*                 pShortTermRefPicSet;
-    const( StdVideoEncodeH265SliceSegmentLongTermRefPics )*  pLongTermRefPics;
-    const( StdVideoEncodeH265WeightTable )*                  pWeightTable;
+    StdVideoEncodeH265SliceSegmentHeaderFlags  flags;
+    StdVideoH265SliceType                      slice_type;
+    uint32_t                                   slice_segment_address;
+    uint8_t                                    collocated_ref_idx;
+    uint8_t                                    MaxNumMergeCand;
+    int8_t                                     slice_cb_qp_offset;
+    int8_t                                     slice_cr_qp_offset;
+    int8_t                                     slice_beta_offset_div2;
+    int8_t                                     slice_tc_offset_div2;
+    int8_t                                     slice_act_y_qp_offset;
+    int8_t                                     slice_act_cb_qp_offset;
+    int8_t                                     slice_act_cr_qp_offset;
+    int8_t                                     slice_qp_delta;
+    uint16_t                                   reserved1;
+    const( StdVideoEncodeH265WeightTable )*    pWeightTable;
 }
 
 struct StdVideoEncodeH265ReferenceListsInfoFlags {
@@ -1046,24 +1034,38 @@ struct StdVideoEncodeH265ReferenceListsInfo {
     StdVideoEncodeH265ReferenceListsInfoFlags  flags;
     uint8_t                                    num_ref_idx_l0_active_minus1;
     uint8_t                                    num_ref_idx_l1_active_minus1;
-    uint16_t                                   reserved1;
-    const( uint8_t )*                          pRefPicList0Entries;
-    const( uint8_t )*                          pRefPicList1Entries;
-    const( uint8_t )*                          pRefList0Modifications;
-    const( uint8_t )*                          pRefList1Modifications;
+    uint8_t[STD_VIDEO_H265_MAX_NUM_LIST_REF]   RefPicList0;
+    uint8_t[STD_VIDEO_H265_MAX_NUM_LIST_REF]   RefPicList1;
+    uint8_t[STD_VIDEO_H265_MAX_NUM_LIST_REF]   list_entry_l0;
+    uint8_t[STD_VIDEO_H265_MAX_NUM_LIST_REF]   list_entry_l1;
 }
 
 struct StdVideoEncodeH265PictureInfoFlags {
 }
 
+struct StdVideoEncodeH265LongTermRefPics {
+    uint8_t                                               num_long_term_sps;
+    uint8_t                                               num_long_term_pics;
+    uint8_t[ STD_VIDEO_H265_MAX_LONG_TERM_REF_PICS_SPS ]  lt_idx_sps;
+    uint8_t[ STD_VIDEO_H265_MAX_LONG_TERM_PICS ]          poc_lsb_lt;
+    uint16_t                                              used_by_curr_pic_lt_flag;
+    uint8_t[ STD_VIDEO_H265_MAX_DELTA_POC ]               delta_poc_msb_present_flag;
+    uint8_t[ STD_VIDEO_H265_MAX_DELTA_POC ]               delta_poc_msb_cycle_lt;
+}
+
 struct StdVideoEncodeH265PictureInfo {
-    StdVideoEncodeH265PictureInfoFlags  flags;
-    StdVideoH265PictureType             PictureType;
-    uint8_t                             sps_video_parameter_set_id;
-    uint8_t                             pps_seq_parameter_set_id;
-    uint8_t                             pps_pic_parameter_set_id;
-    uint8_t                             TemporalId;
-    int32_t                             PicOrderCntVal;
+    StdVideoEncodeH265PictureInfoFlags              flags;
+    StdVideoH265PictureType                         pic_type;
+    uint8_t                                         sps_video_parameter_set_id;
+    uint8_t                                         pps_seq_parameter_set_id;
+    uint8_t                                         pps_pic_parameter_set_id;
+    uint8_t                                         short_term_ref_pic_set_idx;
+    int32_t                                         PicOrderCntVal;
+    uint8_t                                         TemporalId;
+    uint8_t[7]                                      reserved1;
+    const( StdVideoEncodeH265ReferenceListsInfo )*  pRefLists;
+    const( StdVideoH265ShortTermRefPicSet )*        pShortTermRefPicSet;
+    const( StdVideoEncodeH265LongTermRefPics )*     pLongTermRefPics;
 }
 
 struct StdVideoEncodeH265ReferenceInfoFlags {
@@ -1071,9 +1073,806 @@ struct StdVideoEncodeH265ReferenceInfoFlags {
 
 struct StdVideoEncodeH265ReferenceInfo {
     StdVideoEncodeH265ReferenceInfoFlags  flags;
-    StdVideoH265PictureType               PictureType;
+    StdVideoH265PictureType               pic_type;
     int32_t                               PicOrderCntVal;
     uint8_t                               TemporalId;
+}
+
+
+// - vulkan_video_codec_av1std -
+enum vulkan_video_codec_av1std = 1;
+
+enum STD_VIDEO_AV1_MAX_LOOP_FILTER_STRENGTHS = 4;
+enum STD_VIDEO_AV1_TOTAL_REFS_PER_FRAME = 8;
+enum STD_VIDEO_AV1_LOOP_FILTER_ADJUSTMENTS = 2;
+enum STD_VIDEO_AV1_MAX_SEGMENTS = 8;
+enum STD_VIDEO_AV1_SEG_LVL_MAX = 8;
+enum STD_VIDEO_AV1_MAX_CDEF_FILTER_STRENGTHS = 8;
+enum STD_VIDEO_AV1_MAX_NUM_PLANES = 3;
+enum STD_VIDEO_AV1_NUM_REF_FRAMES = 8;
+enum STD_VIDEO_AV1_GLOBAL_MOTION_PARAMS = 6;
+enum STD_VIDEO_AV1_MAX_NUM_Y_POINTS = 14;
+enum STD_VIDEO_AV1_MAX_NUM_CB_POINTS = 10;
+enum STD_VIDEO_AV1_MAX_NUM_CR_POINTS = 10;
+enum STD_VIDEO_AV1_MAX_NUM_POS_LUMA = 24;
+enum STD_VIDEO_AV1_MAX_NUM_POS_CHROMA = 25;
+enum STD_VIDEO_AV1_REFS_PER_FRAME = 7;
+enum STD_VIDEO_AV1_MAX_TILE_COLS = 64;
+enum STD_VIDEO_AV1_MAX_TILE_ROWS = 64;
+enum STD_VIDEO_AV1_PRIMARY_REF_NONE = 7;
+enum STD_VIDEO_AV1_SELECT_INTEGER_MV = 2;
+enum STD_VIDEO_AV1_SELECT_SCREEN_CONTENT_TOOLS = 2;
+enum STD_VIDEO_AV1_SKIP_MODE_FRAMES = 2;
+
+enum StdVideoAV1Profile {
+    STD_VIDEO_AV1_PROFILE_MAIN           = 0,
+    STD_VIDEO_AV1_PROFILE_HIGH           = 1,
+    STD_VIDEO_AV1_PROFILE_PROFESSIONAL   = 2,
+    STD_VIDEO_AV1_PROFILE_INVALID        = 0x7FFFFFFF,
+    STD_VIDEO_AV1_PROFILE_MAX_ENUM       = 0x7FFFFFFF
+}
+
+enum STD_VIDEO_AV1_PROFILE_MAIN          = StdVideoAV1Profile.STD_VIDEO_AV1_PROFILE_MAIN;
+enum STD_VIDEO_AV1_PROFILE_HIGH          = StdVideoAV1Profile.STD_VIDEO_AV1_PROFILE_HIGH;
+enum STD_VIDEO_AV1_PROFILE_PROFESSIONAL  = StdVideoAV1Profile.STD_VIDEO_AV1_PROFILE_PROFESSIONAL;
+enum STD_VIDEO_AV1_PROFILE_INVALID       = StdVideoAV1Profile.STD_VIDEO_AV1_PROFILE_INVALID;
+enum STD_VIDEO_AV1_PROFILE_MAX_ENUM      = StdVideoAV1Profile.STD_VIDEO_AV1_PROFILE_MAX_ENUM;
+
+enum StdVideoAV1Level {
+    STD_VIDEO_AV1_LEVEL_2_0      = 0,
+    STD_VIDEO_AV1_LEVEL_2_1      = 1,
+    STD_VIDEO_AV1_LEVEL_2_2      = 2,
+    STD_VIDEO_AV1_LEVEL_2_3      = 3,
+    STD_VIDEO_AV1_LEVEL_3_0      = 4,
+    STD_VIDEO_AV1_LEVEL_3_1      = 5,
+    STD_VIDEO_AV1_LEVEL_3_2      = 6,
+    STD_VIDEO_AV1_LEVEL_3_3      = 7,
+    STD_VIDEO_AV1_LEVEL_4_0      = 8,
+    STD_VIDEO_AV1_LEVEL_4_1      = 9,
+    STD_VIDEO_AV1_LEVEL_4_2      = 10,
+    STD_VIDEO_AV1_LEVEL_4_3      = 11,
+    STD_VIDEO_AV1_LEVEL_5_0      = 12,
+    STD_VIDEO_AV1_LEVEL_5_1      = 13,
+    STD_VIDEO_AV1_LEVEL_5_2      = 14,
+    STD_VIDEO_AV1_LEVEL_5_3      = 15,
+    STD_VIDEO_AV1_LEVEL_6_0      = 16,
+    STD_VIDEO_AV1_LEVEL_6_1      = 17,
+    STD_VIDEO_AV1_LEVEL_6_2      = 18,
+    STD_VIDEO_AV1_LEVEL_6_3      = 19,
+    STD_VIDEO_AV1_LEVEL_7_0      = 20,
+    STD_VIDEO_AV1_LEVEL_7_1      = 21,
+    STD_VIDEO_AV1_LEVEL_7_2      = 22,
+    STD_VIDEO_AV1_LEVEL_7_3      = 23,
+    STD_VIDEO_AV1_LEVEL_INVALID  = 0x7FFFFFFF,
+    STD_VIDEO_AV1_LEVEL_MAX_ENUM = 0x7FFFFFFF
+}
+
+enum STD_VIDEO_AV1_LEVEL_2_0     = StdVideoAV1Level.STD_VIDEO_AV1_LEVEL_2_0;
+enum STD_VIDEO_AV1_LEVEL_2_1     = StdVideoAV1Level.STD_VIDEO_AV1_LEVEL_2_1;
+enum STD_VIDEO_AV1_LEVEL_2_2     = StdVideoAV1Level.STD_VIDEO_AV1_LEVEL_2_2;
+enum STD_VIDEO_AV1_LEVEL_2_3     = StdVideoAV1Level.STD_VIDEO_AV1_LEVEL_2_3;
+enum STD_VIDEO_AV1_LEVEL_3_0     = StdVideoAV1Level.STD_VIDEO_AV1_LEVEL_3_0;
+enum STD_VIDEO_AV1_LEVEL_3_1     = StdVideoAV1Level.STD_VIDEO_AV1_LEVEL_3_1;
+enum STD_VIDEO_AV1_LEVEL_3_2     = StdVideoAV1Level.STD_VIDEO_AV1_LEVEL_3_2;
+enum STD_VIDEO_AV1_LEVEL_3_3     = StdVideoAV1Level.STD_VIDEO_AV1_LEVEL_3_3;
+enum STD_VIDEO_AV1_LEVEL_4_0     = StdVideoAV1Level.STD_VIDEO_AV1_LEVEL_4_0;
+enum STD_VIDEO_AV1_LEVEL_4_1     = StdVideoAV1Level.STD_VIDEO_AV1_LEVEL_4_1;
+enum STD_VIDEO_AV1_LEVEL_4_2     = StdVideoAV1Level.STD_VIDEO_AV1_LEVEL_4_2;
+enum STD_VIDEO_AV1_LEVEL_4_3     = StdVideoAV1Level.STD_VIDEO_AV1_LEVEL_4_3;
+enum STD_VIDEO_AV1_LEVEL_5_0     = StdVideoAV1Level.STD_VIDEO_AV1_LEVEL_5_0;
+enum STD_VIDEO_AV1_LEVEL_5_1     = StdVideoAV1Level.STD_VIDEO_AV1_LEVEL_5_1;
+enum STD_VIDEO_AV1_LEVEL_5_2     = StdVideoAV1Level.STD_VIDEO_AV1_LEVEL_5_2;
+enum STD_VIDEO_AV1_LEVEL_5_3     = StdVideoAV1Level.STD_VIDEO_AV1_LEVEL_5_3;
+enum STD_VIDEO_AV1_LEVEL_6_0     = StdVideoAV1Level.STD_VIDEO_AV1_LEVEL_6_0;
+enum STD_VIDEO_AV1_LEVEL_6_1     = StdVideoAV1Level.STD_VIDEO_AV1_LEVEL_6_1;
+enum STD_VIDEO_AV1_LEVEL_6_2     = StdVideoAV1Level.STD_VIDEO_AV1_LEVEL_6_2;
+enum STD_VIDEO_AV1_LEVEL_6_3     = StdVideoAV1Level.STD_VIDEO_AV1_LEVEL_6_3;
+enum STD_VIDEO_AV1_LEVEL_7_0     = StdVideoAV1Level.STD_VIDEO_AV1_LEVEL_7_0;
+enum STD_VIDEO_AV1_LEVEL_7_1     = StdVideoAV1Level.STD_VIDEO_AV1_LEVEL_7_1;
+enum STD_VIDEO_AV1_LEVEL_7_2     = StdVideoAV1Level.STD_VIDEO_AV1_LEVEL_7_2;
+enum STD_VIDEO_AV1_LEVEL_7_3     = StdVideoAV1Level.STD_VIDEO_AV1_LEVEL_7_3;
+enum STD_VIDEO_AV1_LEVEL_INVALID = StdVideoAV1Level.STD_VIDEO_AV1_LEVEL_INVALID;
+enum STD_VIDEO_AV1_LEVEL_MAX_ENUM = StdVideoAV1Level.STD_VIDEO_AV1_LEVEL_MAX_ENUM;
+
+enum StdVideoAV1FrameType {
+    STD_VIDEO_AV1_FRAME_TYPE_KEY         = 0,
+    STD_VIDEO_AV1_FRAME_TYPE_INTER       = 1,
+    STD_VIDEO_AV1_FRAME_TYPE_INTRA_ONLY  = 2,
+    STD_VIDEO_AV1_FRAME_TYPE_SWITCH      = 3,
+    STD_VIDEO_AV1_FRAME_TYPE_INVALID     = 0x7FFFFFFF,
+    STD_VIDEO_AV1_FRAME_TYPE_MAX_ENUM    = 0x7FFFFFFF
+}
+
+enum STD_VIDEO_AV1_FRAME_TYPE_KEY        = StdVideoAV1FrameType.STD_VIDEO_AV1_FRAME_TYPE_KEY;
+enum STD_VIDEO_AV1_FRAME_TYPE_INTER      = StdVideoAV1FrameType.STD_VIDEO_AV1_FRAME_TYPE_INTER;
+enum STD_VIDEO_AV1_FRAME_TYPE_INTRA_ONLY = StdVideoAV1FrameType.STD_VIDEO_AV1_FRAME_TYPE_INTRA_ONLY;
+enum STD_VIDEO_AV1_FRAME_TYPE_SWITCH     = StdVideoAV1FrameType.STD_VIDEO_AV1_FRAME_TYPE_SWITCH;
+enum STD_VIDEO_AV1_FRAME_TYPE_INVALID    = StdVideoAV1FrameType.STD_VIDEO_AV1_FRAME_TYPE_INVALID;
+enum STD_VIDEO_AV1_FRAME_TYPE_MAX_ENUM   = StdVideoAV1FrameType.STD_VIDEO_AV1_FRAME_TYPE_MAX_ENUM;
+
+enum StdVideoAV1ReferenceName {
+    STD_VIDEO_AV1_REFERENCE_NAME_INTRA_FRAME     = 0,
+    STD_VIDEO_AV1_REFERENCE_NAME_LAST_FRAME      = 1,
+    STD_VIDEO_AV1_REFERENCE_NAME_LAST2_FRAME     = 2,
+    STD_VIDEO_AV1_REFERENCE_NAME_LAST3_FRAME     = 3,
+    STD_VIDEO_AV1_REFERENCE_NAME_GOLDEN_FRAME    = 4,
+    STD_VIDEO_AV1_REFERENCE_NAME_BWDREF_FRAME    = 5,
+    STD_VIDEO_AV1_REFERENCE_NAME_ALTREF2_FRAME   = 6,
+    STD_VIDEO_AV1_REFERENCE_NAME_ALTREF_FRAME    = 7,
+    STD_VIDEO_AV1_REFERENCE_NAME_INVALID         = 0x7FFFFFFF,
+    STD_VIDEO_AV1_REFERENCE_NAME_MAX_ENUM        = 0x7FFFFFFF
+}
+
+enum STD_VIDEO_AV1_REFERENCE_NAME_INTRA_FRAME    = StdVideoAV1ReferenceName.STD_VIDEO_AV1_REFERENCE_NAME_INTRA_FRAME;
+enum STD_VIDEO_AV1_REFERENCE_NAME_LAST_FRAME     = StdVideoAV1ReferenceName.STD_VIDEO_AV1_REFERENCE_NAME_LAST_FRAME;
+enum STD_VIDEO_AV1_REFERENCE_NAME_LAST2_FRAME    = StdVideoAV1ReferenceName.STD_VIDEO_AV1_REFERENCE_NAME_LAST2_FRAME;
+enum STD_VIDEO_AV1_REFERENCE_NAME_LAST3_FRAME    = StdVideoAV1ReferenceName.STD_VIDEO_AV1_REFERENCE_NAME_LAST3_FRAME;
+enum STD_VIDEO_AV1_REFERENCE_NAME_GOLDEN_FRAME   = StdVideoAV1ReferenceName.STD_VIDEO_AV1_REFERENCE_NAME_GOLDEN_FRAME;
+enum STD_VIDEO_AV1_REFERENCE_NAME_BWDREF_FRAME   = StdVideoAV1ReferenceName.STD_VIDEO_AV1_REFERENCE_NAME_BWDREF_FRAME;
+enum STD_VIDEO_AV1_REFERENCE_NAME_ALTREF2_FRAME  = StdVideoAV1ReferenceName.STD_VIDEO_AV1_REFERENCE_NAME_ALTREF2_FRAME;
+enum STD_VIDEO_AV1_REFERENCE_NAME_ALTREF_FRAME   = StdVideoAV1ReferenceName.STD_VIDEO_AV1_REFERENCE_NAME_ALTREF_FRAME;
+enum STD_VIDEO_AV1_REFERENCE_NAME_INVALID        = StdVideoAV1ReferenceName.STD_VIDEO_AV1_REFERENCE_NAME_INVALID;
+enum STD_VIDEO_AV1_REFERENCE_NAME_MAX_ENUM       = StdVideoAV1ReferenceName.STD_VIDEO_AV1_REFERENCE_NAME_MAX_ENUM;
+
+enum StdVideoAV1InterpolationFilter {
+    STD_VIDEO_AV1_INTERPOLATION_FILTER_EIGHTTAP          = 0,
+    STD_VIDEO_AV1_INTERPOLATION_FILTER_EIGHTTAP_SMOOTH   = 1,
+    STD_VIDEO_AV1_INTERPOLATION_FILTER_EIGHTTAP_SHARP    = 2,
+    STD_VIDEO_AV1_INTERPOLATION_FILTER_BILINEAR          = 3,
+    STD_VIDEO_AV1_INTERPOLATION_FILTER_SWITCHABLE        = 4,
+    STD_VIDEO_AV1_INTERPOLATION_FILTER_INVALID           = 0x7FFFFFFF,
+    STD_VIDEO_AV1_INTERPOLATION_FILTER_MAX_ENUM          = 0x7FFFFFFF
+}
+
+enum STD_VIDEO_AV1_INTERPOLATION_FILTER_EIGHTTAP         = StdVideoAV1InterpolationFilter.STD_VIDEO_AV1_INTERPOLATION_FILTER_EIGHTTAP;
+enum STD_VIDEO_AV1_INTERPOLATION_FILTER_EIGHTTAP_SMOOTH  = StdVideoAV1InterpolationFilter.STD_VIDEO_AV1_INTERPOLATION_FILTER_EIGHTTAP_SMOOTH;
+enum STD_VIDEO_AV1_INTERPOLATION_FILTER_EIGHTTAP_SHARP   = StdVideoAV1InterpolationFilter.STD_VIDEO_AV1_INTERPOLATION_FILTER_EIGHTTAP_SHARP;
+enum STD_VIDEO_AV1_INTERPOLATION_FILTER_BILINEAR         = StdVideoAV1InterpolationFilter.STD_VIDEO_AV1_INTERPOLATION_FILTER_BILINEAR;
+enum STD_VIDEO_AV1_INTERPOLATION_FILTER_SWITCHABLE       = StdVideoAV1InterpolationFilter.STD_VIDEO_AV1_INTERPOLATION_FILTER_SWITCHABLE;
+enum STD_VIDEO_AV1_INTERPOLATION_FILTER_INVALID          = StdVideoAV1InterpolationFilter.STD_VIDEO_AV1_INTERPOLATION_FILTER_INVALID;
+enum STD_VIDEO_AV1_INTERPOLATION_FILTER_MAX_ENUM         = StdVideoAV1InterpolationFilter.STD_VIDEO_AV1_INTERPOLATION_FILTER_MAX_ENUM;
+
+enum StdVideoAV1TxMode {
+    STD_VIDEO_AV1_TX_MODE_ONLY_4X4       = 0,
+    STD_VIDEO_AV1_TX_MODE_LARGEST        = 1,
+    STD_VIDEO_AV1_TX_MODE_SELECT         = 2,
+    STD_VIDEO_AV1_TX_MODE_INVALID        = 0x7FFFFFFF,
+    STD_VIDEO_AV1_TXMODE_MAX_ENUM        = 0x7FFFFFFF
+}
+
+enum STD_VIDEO_AV1_TX_MODE_ONLY_4X4      = StdVideoAV1TxMode.STD_VIDEO_AV1_TX_MODE_ONLY_4X4;
+enum STD_VIDEO_AV1_TX_MODE_LARGEST       = StdVideoAV1TxMode.STD_VIDEO_AV1_TX_MODE_LARGEST;
+enum STD_VIDEO_AV1_TX_MODE_SELECT        = StdVideoAV1TxMode.STD_VIDEO_AV1_TX_MODE_SELECT;
+enum STD_VIDEO_AV1_TX_MODE_INVALID       = StdVideoAV1TxMode.STD_VIDEO_AV1_TX_MODE_INVALID;
+enum STD_VIDEO_AV1_TXMODE_MAX_ENUM       = StdVideoAV1TxMode.STD_VIDEO_AV1_TXMODE_MAX_ENUM;
+
+enum StdVideoAV1FrameRestorationType {
+    STD_VIDEO_AV1_FRAME_RESTORATION_TYPE_NONE            = 0,
+    STD_VIDEO_AV1_FRAME_RESTORATION_TYPE_WIENER          = 1,
+    STD_VIDEO_AV1_FRAME_RESTORATION_TYPE_SGRPROJ         = 2,
+    STD_VIDEO_AV1_FRAME_RESTORATION_TYPE_SWITCHABLE      = 3,
+    STD_VIDEO_AV1_FRAME_RESTORATION_TYPE_INVALID         = 0x7FFFFFFF,
+    STD_VIDEO_AV1_FRAME_RESTORATION_TYPE_MAX_ENUM        = 0x7FFFFFFF
+}
+
+enum STD_VIDEO_AV1_FRAME_RESTORATION_TYPE_NONE           = StdVideoAV1FrameRestorationType.STD_VIDEO_AV1_FRAME_RESTORATION_TYPE_NONE;
+enum STD_VIDEO_AV1_FRAME_RESTORATION_TYPE_WIENER         = StdVideoAV1FrameRestorationType.STD_VIDEO_AV1_FRAME_RESTORATION_TYPE_WIENER;
+enum STD_VIDEO_AV1_FRAME_RESTORATION_TYPE_SGRPROJ        = StdVideoAV1FrameRestorationType.STD_VIDEO_AV1_FRAME_RESTORATION_TYPE_SGRPROJ;
+enum STD_VIDEO_AV1_FRAME_RESTORATION_TYPE_SWITCHABLE     = StdVideoAV1FrameRestorationType.STD_VIDEO_AV1_FRAME_RESTORATION_TYPE_SWITCHABLE;
+enum STD_VIDEO_AV1_FRAME_RESTORATION_TYPE_INVALID        = StdVideoAV1FrameRestorationType.STD_VIDEO_AV1_FRAME_RESTORATION_TYPE_INVALID;
+enum STD_VIDEO_AV1_FRAME_RESTORATION_TYPE_MAX_ENUM       = StdVideoAV1FrameRestorationType.STD_VIDEO_AV1_FRAME_RESTORATION_TYPE_MAX_ENUM;
+
+enum StdVideoAV1ColorPrimaries {
+    STD_VIDEO_AV1_COLOR_PRIMARIES_BT_709                 = 1,
+    STD_VIDEO_AV1_COLOR_PRIMARIES_UNSPECIFIED            = 2,
+    STD_VIDEO_AV1_COLOR_PRIMARIES_BT_470_M               = 4,
+    STD_VIDEO_AV1_COLOR_PRIMARIES_BT_470_B_G             = 5,
+    STD_VIDEO_AV1_COLOR_PRIMARIES_BT_601                 = 6,
+    STD_VIDEO_AV1_COLOR_PRIMARIES_SMPTE_240              = 7,
+    STD_VIDEO_AV1_COLOR_PRIMARIES_GENERIC_FILM           = 8,
+    STD_VIDEO_AV1_COLOR_PRIMARIES_BT_2020                = 9,
+    STD_VIDEO_AV1_COLOR_PRIMARIES_XYZ                    = 10,
+    STD_VIDEO_AV1_COLOR_PRIMARIES_SMPTE_431              = 11,
+    STD_VIDEO_AV1_COLOR_PRIMARIES_SMPTE_432              = 12,
+    STD_VIDEO_AV1_COLOR_PRIMARIES_EBU_3213               = 22,
+    STD_VIDEO_AV1_COLOR_PRIMARIES_INVALID                = 0x7FFFFFFF,
+    STD_VIDEO_AV1_COLOR_PRIMARIES_BT_UNSPECIFIED         = STD_VIDEO_AV1_COLOR_PRIMARIES_UNSPECIFIED,
+    STD_VIDEO_AV1_COLOR_PRIMARIES_MAX_ENUM               = 0x7FFFFFFF
+}
+
+enum STD_VIDEO_AV1_COLOR_PRIMARIES_BT_709                = StdVideoAV1ColorPrimaries.STD_VIDEO_AV1_COLOR_PRIMARIES_BT_709;
+enum STD_VIDEO_AV1_COLOR_PRIMARIES_UNSPECIFIED           = StdVideoAV1ColorPrimaries.STD_VIDEO_AV1_COLOR_PRIMARIES_UNSPECIFIED;
+enum STD_VIDEO_AV1_COLOR_PRIMARIES_BT_470_M              = StdVideoAV1ColorPrimaries.STD_VIDEO_AV1_COLOR_PRIMARIES_BT_470_M;
+enum STD_VIDEO_AV1_COLOR_PRIMARIES_BT_470_B_G            = StdVideoAV1ColorPrimaries.STD_VIDEO_AV1_COLOR_PRIMARIES_BT_470_B_G;
+enum STD_VIDEO_AV1_COLOR_PRIMARIES_BT_601                = StdVideoAV1ColorPrimaries.STD_VIDEO_AV1_COLOR_PRIMARIES_BT_601;
+enum STD_VIDEO_AV1_COLOR_PRIMARIES_SMPTE_240             = StdVideoAV1ColorPrimaries.STD_VIDEO_AV1_COLOR_PRIMARIES_SMPTE_240;
+enum STD_VIDEO_AV1_COLOR_PRIMARIES_GENERIC_FILM          = StdVideoAV1ColorPrimaries.STD_VIDEO_AV1_COLOR_PRIMARIES_GENERIC_FILM;
+enum STD_VIDEO_AV1_COLOR_PRIMARIES_BT_2020               = StdVideoAV1ColorPrimaries.STD_VIDEO_AV1_COLOR_PRIMARIES_BT_2020;
+enum STD_VIDEO_AV1_COLOR_PRIMARIES_XYZ                   = StdVideoAV1ColorPrimaries.STD_VIDEO_AV1_COLOR_PRIMARIES_XYZ;
+enum STD_VIDEO_AV1_COLOR_PRIMARIES_SMPTE_431             = StdVideoAV1ColorPrimaries.STD_VIDEO_AV1_COLOR_PRIMARIES_SMPTE_431;
+enum STD_VIDEO_AV1_COLOR_PRIMARIES_SMPTE_432             = StdVideoAV1ColorPrimaries.STD_VIDEO_AV1_COLOR_PRIMARIES_SMPTE_432;
+enum STD_VIDEO_AV1_COLOR_PRIMARIES_EBU_3213              = StdVideoAV1ColorPrimaries.STD_VIDEO_AV1_COLOR_PRIMARIES_EBU_3213;
+enum STD_VIDEO_AV1_COLOR_PRIMARIES_INVALID               = StdVideoAV1ColorPrimaries.STD_VIDEO_AV1_COLOR_PRIMARIES_INVALID;
+enum STD_VIDEO_AV1_COLOR_PRIMARIES_BT_UNSPECIFIED        = StdVideoAV1ColorPrimaries.STD_VIDEO_AV1_COLOR_PRIMARIES_BT_UNSPECIFIED;
+enum STD_VIDEO_AV1_COLOR_PRIMARIES_MAX_ENUM              = StdVideoAV1ColorPrimaries.STD_VIDEO_AV1_COLOR_PRIMARIES_MAX_ENUM;
+
+enum StdVideoAV1TransferCharacteristics {
+    STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_RESERVED_0            = 0,
+    STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_BT_709                = 1,
+    STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_UNSPECIFIED           = 2,
+    STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_RESERVED_3            = 3,
+    STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_BT_470_M              = 4,
+    STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_BT_470_B_G            = 5,
+    STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_BT_601                = 6,
+    STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_SMPTE_240             = 7,
+    STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_LINEAR                = 8,
+    STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_LOG_100               = 9,
+    STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_LOG_100_SQRT10        = 10,
+    STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_IEC_61966             = 11,
+    STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_BT_1361               = 12,
+    STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_SRGB                  = 13,
+    STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_BT_2020_10_BIT        = 14,
+    STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_BT_2020_12_BIT        = 15,
+    STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_SMPTE_2084            = 16,
+    STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_SMPTE_428             = 17,
+    STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_HLG                   = 18,
+    STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_INVALID               = 0x7FFFFFFF,
+    STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_MAX_ENUM              = 0x7FFFFFFF
+}
+
+enum STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_RESERVED_0           = StdVideoAV1TransferCharacteristics.STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_RESERVED_0;
+enum STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_BT_709               = StdVideoAV1TransferCharacteristics.STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_BT_709;
+enum STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_UNSPECIFIED          = StdVideoAV1TransferCharacteristics.STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_UNSPECIFIED;
+enum STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_RESERVED_3           = StdVideoAV1TransferCharacteristics.STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_RESERVED_3;
+enum STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_BT_470_M             = StdVideoAV1TransferCharacteristics.STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_BT_470_M;
+enum STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_BT_470_B_G           = StdVideoAV1TransferCharacteristics.STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_BT_470_B_G;
+enum STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_BT_601               = StdVideoAV1TransferCharacteristics.STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_BT_601;
+enum STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_SMPTE_240            = StdVideoAV1TransferCharacteristics.STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_SMPTE_240;
+enum STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_LINEAR               = StdVideoAV1TransferCharacteristics.STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_LINEAR;
+enum STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_LOG_100              = StdVideoAV1TransferCharacteristics.STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_LOG_100;
+enum STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_LOG_100_SQRT10       = StdVideoAV1TransferCharacteristics.STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_LOG_100_SQRT10;
+enum STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_IEC_61966            = StdVideoAV1TransferCharacteristics.STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_IEC_61966;
+enum STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_BT_1361              = StdVideoAV1TransferCharacteristics.STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_BT_1361;
+enum STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_SRGB                 = StdVideoAV1TransferCharacteristics.STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_SRGB;
+enum STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_BT_2020_10_BIT       = StdVideoAV1TransferCharacteristics.STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_BT_2020_10_BIT;
+enum STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_BT_2020_12_BIT       = StdVideoAV1TransferCharacteristics.STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_BT_2020_12_BIT;
+enum STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_SMPTE_2084           = StdVideoAV1TransferCharacteristics.STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_SMPTE_2084;
+enum STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_SMPTE_428            = StdVideoAV1TransferCharacteristics.STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_SMPTE_428;
+enum STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_HLG                  = StdVideoAV1TransferCharacteristics.STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_HLG;
+enum STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_INVALID              = StdVideoAV1TransferCharacteristics.STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_INVALID;
+enum STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_MAX_ENUM             = StdVideoAV1TransferCharacteristics.STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_MAX_ENUM;
+
+enum StdVideoAV1MatrixCoefficients {
+    STD_VIDEO_AV1_MATRIX_COEFFICIENTS_IDENTITY           = 0,
+    STD_VIDEO_AV1_MATRIX_COEFFICIENTS_BT_709             = 1,
+    STD_VIDEO_AV1_MATRIX_COEFFICIENTS_UNSPECIFIED        = 2,
+    STD_VIDEO_AV1_MATRIX_COEFFICIENTS_RESERVED_3         = 3,
+    STD_VIDEO_AV1_MATRIX_COEFFICIENTS_FCC                = 4,
+    STD_VIDEO_AV1_MATRIX_COEFFICIENTS_BT_470_B_G         = 5,
+    STD_VIDEO_AV1_MATRIX_COEFFICIENTS_BT_601             = 6,
+    STD_VIDEO_AV1_MATRIX_COEFFICIENTS_SMPTE_240          = 7,
+    STD_VIDEO_AV1_MATRIX_COEFFICIENTS_SMPTE_YCGCO        = 8,
+    STD_VIDEO_AV1_MATRIX_COEFFICIENTS_BT_2020_NCL        = 9,
+    STD_VIDEO_AV1_MATRIX_COEFFICIENTS_BT_2020_CL         = 10,
+    STD_VIDEO_AV1_MATRIX_COEFFICIENTS_SMPTE_2085         = 11,
+    STD_VIDEO_AV1_MATRIX_COEFFICIENTS_CHROMAT_NCL        = 12,
+    STD_VIDEO_AV1_MATRIX_COEFFICIENTS_CHROMAT_CL         = 13,
+    STD_VIDEO_AV1_MATRIX_COEFFICIENTS_ICTCP              = 14,
+    STD_VIDEO_AV1_MATRIX_COEFFICIENTS_INVALID            = 0x7FFFFFFF,
+    STD_VIDEO_AV1_MATRIX_COEFFICIENTS_MAX_ENUM           = 0x7FFFFFFF
+}
+
+enum STD_VIDEO_AV1_MATRIX_COEFFICIENTS_IDENTITY          = StdVideoAV1MatrixCoefficients.STD_VIDEO_AV1_MATRIX_COEFFICIENTS_IDENTITY;
+enum STD_VIDEO_AV1_MATRIX_COEFFICIENTS_BT_709            = StdVideoAV1MatrixCoefficients.STD_VIDEO_AV1_MATRIX_COEFFICIENTS_BT_709;
+enum STD_VIDEO_AV1_MATRIX_COEFFICIENTS_UNSPECIFIED       = StdVideoAV1MatrixCoefficients.STD_VIDEO_AV1_MATRIX_COEFFICIENTS_UNSPECIFIED;
+enum STD_VIDEO_AV1_MATRIX_COEFFICIENTS_RESERVED_3        = StdVideoAV1MatrixCoefficients.STD_VIDEO_AV1_MATRIX_COEFFICIENTS_RESERVED_3;
+enum STD_VIDEO_AV1_MATRIX_COEFFICIENTS_FCC               = StdVideoAV1MatrixCoefficients.STD_VIDEO_AV1_MATRIX_COEFFICIENTS_FCC;
+enum STD_VIDEO_AV1_MATRIX_COEFFICIENTS_BT_470_B_G        = StdVideoAV1MatrixCoefficients.STD_VIDEO_AV1_MATRIX_COEFFICIENTS_BT_470_B_G;
+enum STD_VIDEO_AV1_MATRIX_COEFFICIENTS_BT_601            = StdVideoAV1MatrixCoefficients.STD_VIDEO_AV1_MATRIX_COEFFICIENTS_BT_601;
+enum STD_VIDEO_AV1_MATRIX_COEFFICIENTS_SMPTE_240         = StdVideoAV1MatrixCoefficients.STD_VIDEO_AV1_MATRIX_COEFFICIENTS_SMPTE_240;
+enum STD_VIDEO_AV1_MATRIX_COEFFICIENTS_SMPTE_YCGCO       = StdVideoAV1MatrixCoefficients.STD_VIDEO_AV1_MATRIX_COEFFICIENTS_SMPTE_YCGCO;
+enum STD_VIDEO_AV1_MATRIX_COEFFICIENTS_BT_2020_NCL       = StdVideoAV1MatrixCoefficients.STD_VIDEO_AV1_MATRIX_COEFFICIENTS_BT_2020_NCL;
+enum STD_VIDEO_AV1_MATRIX_COEFFICIENTS_BT_2020_CL        = StdVideoAV1MatrixCoefficients.STD_VIDEO_AV1_MATRIX_COEFFICIENTS_BT_2020_CL;
+enum STD_VIDEO_AV1_MATRIX_COEFFICIENTS_SMPTE_2085        = StdVideoAV1MatrixCoefficients.STD_VIDEO_AV1_MATRIX_COEFFICIENTS_SMPTE_2085;
+enum STD_VIDEO_AV1_MATRIX_COEFFICIENTS_CHROMAT_NCL       = StdVideoAV1MatrixCoefficients.STD_VIDEO_AV1_MATRIX_COEFFICIENTS_CHROMAT_NCL;
+enum STD_VIDEO_AV1_MATRIX_COEFFICIENTS_CHROMAT_CL        = StdVideoAV1MatrixCoefficients.STD_VIDEO_AV1_MATRIX_COEFFICIENTS_CHROMAT_CL;
+enum STD_VIDEO_AV1_MATRIX_COEFFICIENTS_ICTCP             = StdVideoAV1MatrixCoefficients.STD_VIDEO_AV1_MATRIX_COEFFICIENTS_ICTCP;
+enum STD_VIDEO_AV1_MATRIX_COEFFICIENTS_INVALID           = StdVideoAV1MatrixCoefficients.STD_VIDEO_AV1_MATRIX_COEFFICIENTS_INVALID;
+enum STD_VIDEO_AV1_MATRIX_COEFFICIENTS_MAX_ENUM          = StdVideoAV1MatrixCoefficients.STD_VIDEO_AV1_MATRIX_COEFFICIENTS_MAX_ENUM;
+
+enum StdVideoAV1ChromaSamplePosition {
+    STD_VIDEO_AV1_CHROMA_SAMPLE_POSITION_UNKNOWN         = 0,
+    STD_VIDEO_AV1_CHROMA_SAMPLE_POSITION_VERTICAL        = 1,
+    STD_VIDEO_AV1_CHROMA_SAMPLE_POSITION_COLOCATED       = 2,
+    STD_VIDEO_AV1_CHROMA_SAMPLE_POSITION_RESERVED        = 3,
+    STD_VIDEO_AV1_CHROMA_SAMPLE_POSITION_INVALID         = 0x7FFFFFFF,
+    STD_VIDEO_AV1_CHROMA_SAMPLE_POSITION_MAX_ENUM        = 0x7FFFFFFF
+}
+
+enum STD_VIDEO_AV1_CHROMA_SAMPLE_POSITION_UNKNOWN        = StdVideoAV1ChromaSamplePosition.STD_VIDEO_AV1_CHROMA_SAMPLE_POSITION_UNKNOWN;
+enum STD_VIDEO_AV1_CHROMA_SAMPLE_POSITION_VERTICAL       = StdVideoAV1ChromaSamplePosition.STD_VIDEO_AV1_CHROMA_SAMPLE_POSITION_VERTICAL;
+enum STD_VIDEO_AV1_CHROMA_SAMPLE_POSITION_COLOCATED      = StdVideoAV1ChromaSamplePosition.STD_VIDEO_AV1_CHROMA_SAMPLE_POSITION_COLOCATED;
+enum STD_VIDEO_AV1_CHROMA_SAMPLE_POSITION_RESERVED       = StdVideoAV1ChromaSamplePosition.STD_VIDEO_AV1_CHROMA_SAMPLE_POSITION_RESERVED;
+enum STD_VIDEO_AV1_CHROMA_SAMPLE_POSITION_INVALID        = StdVideoAV1ChromaSamplePosition.STD_VIDEO_AV1_CHROMA_SAMPLE_POSITION_INVALID;
+enum STD_VIDEO_AV1_CHROMA_SAMPLE_POSITION_MAX_ENUM       = StdVideoAV1ChromaSamplePosition.STD_VIDEO_AV1_CHROMA_SAMPLE_POSITION_MAX_ENUM;
+
+struct StdVideoAV1ColorConfigFlags {
+}
+
+struct StdVideoAV1ColorConfig {
+    StdVideoAV1ColorConfigFlags         flags;
+    uint8_t                             BitDepth;
+    uint8_t                             subsampling_x;
+    uint8_t                             subsampling_y;
+    uint8_t                             reserved1;
+    StdVideoAV1ColorPrimaries           color_primaries;
+    StdVideoAV1TransferCharacteristics  transfer_characteristics;
+    StdVideoAV1MatrixCoefficients       matrix_coefficients;
+    StdVideoAV1ChromaSamplePosition     chroma_sample_position;
+}
+
+struct StdVideoAV1TimingInfoFlags {
+}
+
+struct StdVideoAV1TimingInfo {
+    StdVideoAV1TimingInfoFlags  flags;
+    uint32_t                    num_units_in_display_tick;
+    uint32_t                    time_scale;
+    uint32_t                    num_ticks_per_picture_minus_1;
+}
+
+struct StdVideoAV1LoopFilterFlags {
+}
+
+struct StdVideoAV1LoopFilter {
+    StdVideoAV1LoopFilterFlags                          flags;
+    uint8_t[ STD_VIDEO_AV1_MAX_LOOP_FILTER_STRENGTHS ]  loop_filter_level;
+    uint8_t                                             loop_filter_sharpness;
+    uint8_t                                             update_ref_delta;
+    int8_t[ STD_VIDEO_AV1_TOTAL_REFS_PER_FRAME ]        loop_filter_ref_deltas;
+    uint8_t                                             update_mode_delta;
+    int8_t[ STD_VIDEO_AV1_LOOP_FILTER_ADJUSTMENTS ]     loop_filter_mode_deltas;
+}
+
+struct StdVideoAV1QuantizationFlags {
+}
+
+struct StdVideoAV1Quantization {
+    StdVideoAV1QuantizationFlags  flags;
+    uint8_t                       base_q_idx;
+    int8_t                        DeltaQYDc;
+    int8_t                        DeltaQUDc;
+    int8_t                        DeltaQUAc;
+    int8_t                        DeltaQVDc;
+    int8_t                        DeltaQVAc;
+    uint8_t                       qm_y;
+    uint8_t                       qm_u;
+    uint8_t                       qm_v;
+}
+
+struct StdVideoAV1Segmentation {
+    uint8_t[ STD_VIDEO_AV1_MAX_SEGMENTS ]  FeatureEnabled;
+    int16_t[ STD_VIDEO_AV1_MAX_SEGMENTS ]  FeatureData;
+}
+
+struct StdVideoAV1TileInfoFlags {
+}
+
+struct StdVideoAV1TileInfo {
+    StdVideoAV1TileInfoFlags  flags;
+    uint8_t                   TileCols;
+    uint8_t                   TileRows;
+    uint16_t                  context_update_tile_id;
+    uint8_t                   tile_size_bytes_minus_1;
+    uint8_t[7]                reserved1;
+    const( uint16_t )*        pMiColStarts;
+    const( uint16_t )*        pMiRowStarts;
+    const( uint16_t )*        pWidthInSbsMinus1;
+    const( uint16_t )*        pHeightInSbsMinus1;
+}
+
+struct StdVideoAV1CDEF {
+    uint8_t                                             cdef_damping_minus_3;
+    uint8_t                                             cdef_bits;
+    uint8_t[ STD_VIDEO_AV1_MAX_CDEF_FILTER_STRENGTHS ]  cdef_y_pri_strength;
+    uint8_t[ STD_VIDEO_AV1_MAX_CDEF_FILTER_STRENGTHS ]  cdef_y_sec_strength;
+    uint8_t[ STD_VIDEO_AV1_MAX_CDEF_FILTER_STRENGTHS ]  cdef_uv_pri_strength;
+    uint8_t[ STD_VIDEO_AV1_MAX_CDEF_FILTER_STRENGTHS ]  cdef_uv_sec_strength;
+}
+
+struct StdVideoAV1LoopRestoration {
+    StdVideoAV1FrameRestorationType[ STD_VIDEO_AV1_MAX_NUM_PLANES ]  FrameRestorationType;
+    uint16_t[ STD_VIDEO_AV1_MAX_NUM_PLANES ]                         LoopRestorationSize;
+}
+
+struct StdVideoAV1GlobalMotion {
+    uint8_t[ STD_VIDEO_AV1_NUM_REF_FRAMES ]  GmType;
+    int32_t[ STD_VIDEO_AV1_NUM_REF_FRAMES ]  gm_params;
+}
+
+struct StdVideoAV1FilmGrainFlags {
+}
+
+struct StdVideoAV1FilmGrain {
+    StdVideoAV1FilmGrainFlags                   flags;
+    uint8_t                                     grain_scaling_minus_8;
+    uint8_t                                     ar_coeff_lag;
+    uint8_t                                     ar_coeff_shift_minus_6;
+    uint8_t                                     grain_scale_shift;
+    uint16_t                                    grain_seed;
+    uint8_t                                     film_grain_params_ref_idx;
+    uint8_t                                     num_y_points;
+    uint8_t[ STD_VIDEO_AV1_MAX_NUM_Y_POINTS ]   point_y_value;
+    uint8_t[ STD_VIDEO_AV1_MAX_NUM_Y_POINTS ]   point_y_scaling;
+    uint8_t                                     num_cb_points;
+    uint8_t[ STD_VIDEO_AV1_MAX_NUM_CB_POINTS ]  point_cb_value;
+    uint8_t[ STD_VIDEO_AV1_MAX_NUM_CB_POINTS ]  point_cb_scaling;
+    uint8_t                                     num_cr_points;
+    uint8_t[ STD_VIDEO_AV1_MAX_NUM_CR_POINTS ]  point_cr_value;
+    uint8_t[ STD_VIDEO_AV1_MAX_NUM_CR_POINTS ]  point_cr_scaling;
+    int8_t[ STD_VIDEO_AV1_MAX_NUM_POS_LUMA ]    ar_coeffs_y_plus_128;
+    int8_t[ STD_VIDEO_AV1_MAX_NUM_POS_CHROMA ]  ar_coeffs_cb_plus_128;
+    int8_t[ STD_VIDEO_AV1_MAX_NUM_POS_CHROMA ]  ar_coeffs_cr_plus_128;
+    uint8_t                                     cb_mult;
+    uint8_t                                     cb_luma_mult;
+    uint16_t                                    cb_offset;
+    uint8_t                                     cr_mult;
+    uint8_t                                     cr_luma_mult;
+    uint16_t                                    cr_offset;
+}
+
+struct StdVideoAV1SequenceHeaderFlags {
+}
+
+struct StdVideoAV1SequenceHeader {
+    StdVideoAV1SequenceHeaderFlags    flags;
+    StdVideoAV1Profile                seq_profile;
+    uint8_t                           frame_width_bits_minus_1;
+    uint8_t                           frame_height_bits_minus_1;
+    uint16_t                          max_frame_width_minus_1;
+    uint16_t                          max_frame_height_minus_1;
+    uint8_t                           delta_frame_id_length_minus_2;
+    uint8_t                           additional_frame_id_length_minus_1;
+    uint8_t                           order_hint_bits_minus_1;
+    uint8_t                           seq_force_integer_mv;
+    uint8_t                           seq_force_screen_content_tools;
+    uint8_t[5]                        reserved1;
+    const( StdVideoAV1ColorConfig )*  pColorConfig;
+    const( StdVideoAV1TimingInfo )*   pTimingInfo;
+}
+
+
+// - vulkan_video_codec_av1std_decode -
+enum vulkan_video_codec_av1std_decode = 1;
+
+enum VK_STD_VULKAN_VIDEO_CODEC_AV1_DECODE_API_VERSION_1_0_0 = VK_MAKE_VIDEO_STD_VERSION( 1, 0, 0 );
+
+enum VK_STD_VULKAN_VIDEO_CODEC_AV1_DECODE_SPEC_VERSION = VK_STD_VULKAN_VIDEO_CODEC_AV1_DECODE_API_VERSION_1_0_0;
+enum const( char )* VK_STD_VULKAN_VIDEO_CODEC_AV1_DECODE_EXTENSION_NAME = "VK_STD_vulkan_video_codec_av1_decode";
+
+struct StdVideoDecodeAV1PictureInfoFlags {
+}
+
+struct StdVideoDecodeAV1PictureInfo {
+    StdVideoDecodeAV1PictureInfoFlags          flags;
+    StdVideoAV1FrameType                       frame_type;
+    uint32_t                                   current_frame_id;
+    uint8_t                                    OrderHint;
+    uint8_t                                    primary_ref_frame;
+    uint8_t                                    refresh_frame_flags;
+    uint8_t                                    reserved1;
+    StdVideoAV1InterpolationFilter             interpolation_filter;
+    StdVideoAV1TxMode                          TxMode;
+    uint8_t                                    delta_q_res;
+    uint8_t                                    delta_lf_res;
+    uint8_t[ STD_VIDEO_AV1_SKIP_MODE_FRAMES ]  SkipModeFrame;
+    uint8_t                                    coded_denom;
+    uint8_t[3]                                 reserved2;
+    uint8_t[ STD_VIDEO_AV1_NUM_REF_FRAMES ]    OrderHints;
+    uint32_t[ STD_VIDEO_AV1_NUM_REF_FRAMES ]   expectedFrameId;
+    const( StdVideoAV1TileInfo )*              pTileInfo;
+    const( StdVideoAV1Quantization )*          pQuantization;
+    const( StdVideoAV1Segmentation )*          pSegmentation;
+    const( StdVideoAV1LoopFilter )*            pLoopFilter;
+    const( StdVideoAV1CDEF )*                  pCDEF;
+    const( StdVideoAV1LoopRestoration )*       pLoopRestoration;
+    const( StdVideoAV1GlobalMotion )*          pGlobalMotion;
+    const( StdVideoAV1FilmGrain )*             pFilmGrain;
+}
+
+struct StdVideoDecodeAV1ReferenceInfoFlags {
+}
+
+struct StdVideoDecodeAV1ReferenceInfo {
+    StdVideoDecodeAV1ReferenceInfoFlags      flags;
+    uint8_t                                  frame_type;
+    uint8_t                                  RefFrameSignBias;
+    uint8_t                                  OrderHint;
+    uint8_t[ STD_VIDEO_AV1_NUM_REF_FRAMES ]  SavedOrderHints;
+}
+
+
+// - vulkan_video_codec_av1std_encode -
+enum vulkan_video_codec_av1std_encode = 1;
+
+enum VK_STD_VULKAN_VIDEO_CODEC_AV1_ENCODE_API_VERSION_1_0_0 = VK_MAKE_VIDEO_STD_VERSION( 1, 0, 0 );
+
+enum VK_STD_VULKAN_VIDEO_CODEC_AV1_ENCODE_SPEC_VERSION = VK_STD_VULKAN_VIDEO_CODEC_AV1_ENCODE_API_VERSION_1_0_0;
+enum const( char )* VK_STD_VULKAN_VIDEO_CODEC_AV1_ENCODE_EXTENSION_NAME = "VK_STD_vulkan_video_codec_av1_encode";
+
+struct StdVideoEncodeAV1DecoderModelInfo {
+    uint8_t   buffer_delay_length_minus_1;
+    uint8_t   buffer_removal_time_length_minus_1;
+    uint8_t   frame_presentation_time_length_minus_1;
+    uint8_t   reserved1;
+    uint32_t  num_units_in_decoding_tick;
+}
+
+struct StdVideoEncodeAV1ExtensionHeader {
+    uint8_t  temporal_id;
+    uint8_t  spatial_id;
+}
+
+struct StdVideoEncodeAV1OperatingPointInfoFlags {
+}
+
+struct StdVideoEncodeAV1OperatingPointInfo {
+    StdVideoEncodeAV1OperatingPointInfoFlags  flags;
+    uint16_t                                  operating_point_idc;
+    uint8_t                                   seq_level_idx;
+    uint8_t                                   seq_tier;
+    uint32_t                                  decoder_buffer_delay;
+    uint32_t                                  encoder_buffer_delay;
+    uint8_t                                   initial_display_delay_minus_1;
+}
+
+struct StdVideoEncodeAV1PictureInfoFlags {
+}
+
+struct StdVideoEncodeAV1PictureInfo {
+    StdVideoEncodeAV1PictureInfoFlags           flags;
+    StdVideoAV1FrameType                        frame_type;
+    uint32_t                                    frame_presentation_time;
+    uint32_t                                    current_frame_id;
+    uint8_t                                     order_hint;
+    uint8_t                                     primary_ref_frame;
+    uint8_t                                     refresh_frame_flags;
+    uint8_t                                     coded_denom;
+    uint16_t                                    render_width_minus_1;
+    uint16_t                                    render_height_minus_1;
+    StdVideoAV1InterpolationFilter              interpolation_filter;
+    StdVideoAV1TxMode                           TxMode;
+    uint8_t                                     delta_q_res;
+    uint8_t                                     delta_lf_res;
+    uint8_t[ STD_VIDEO_AV1_NUM_REF_FRAMES ]     ref_order_hint;
+    int8_t[ STD_VIDEO_AV1_REFS_PER_FRAME ]      ref_frame_idx;
+    uint8_t[3]                                  reserved1;
+    uint32_t[ STD_VIDEO_AV1_REFS_PER_FRAME ]    delta_frame_id_minus_1;
+    const( StdVideoAV1TileInfo )*               pTileInfo;
+    const( StdVideoAV1Quantization )*           pQuantization;
+    const( StdVideoAV1Segmentation )*           pSegmentation;
+    const( StdVideoAV1LoopFilter )*             pLoopFilter;
+    const( StdVideoAV1CDEF )*                   pCDEF;
+    const( StdVideoAV1LoopRestoration )*        pLoopRestoration;
+    const( StdVideoAV1GlobalMotion )*           pGlobalMotion;
+    const( StdVideoEncodeAV1ExtensionHeader )*  pExtensionHeader;
+    const( uint32_t )*                          pBufferRemovalTimes;
+}
+
+struct StdVideoEncodeAV1ReferenceInfoFlags {
+}
+
+struct StdVideoEncodeAV1ReferenceInfo {
+    StdVideoEncodeAV1ReferenceInfoFlags         flags;
+    uint32_t                                    RefFrameId;
+    StdVideoAV1FrameType                        frame_type;
+    uint8_t                                     OrderHint;
+    uint8_t[3]                                  reserved1;
+    const( StdVideoEncodeAV1ExtensionHeader )*  pExtensionHeader;
+}
+
+
+// - vulkan_video_codec_vp9std -
+enum vulkan_video_codec_vp9std = 1;
+
+enum STD_VIDEO_VP9_MAX_REF_FRAMES = 4;
+enum STD_VIDEO_VP9_LOOP_FILTER_ADJUSTMENTS = 2;
+enum STD_VIDEO_VP9_MAX_SEGMENTATION_TREE_PROBS = 7;
+enum STD_VIDEO_VP9_MAX_SEGMENTATION_PRED_PROB = 3;
+enum STD_VIDEO_VP9_MAX_SEGMENTS = 8;
+enum STD_VIDEO_VP9_SEG_LVL_MAX = 4;
+enum STD_VIDEO_VP9_NUM_REF_FRAMES = 8;
+enum STD_VIDEO_VP9_REFS_PER_FRAME = 3;
+
+enum StdVideoVP9Profile {
+    STD_VIDEO_VP9_PROFILE_0              = 0,
+    STD_VIDEO_VP9_PROFILE_1              = 1,
+    STD_VIDEO_VP9_PROFILE_2              = 2,
+    STD_VIDEO_VP9_PROFILE_3              = 3,
+    STD_VIDEO_VP9_PROFILE_INVALID        = 0x7FFFFFFF,
+    STD_VIDEO_VP9_PROFILE_MAX_ENUM       = 0x7FFFFFFF
+}
+
+enum STD_VIDEO_VP9_PROFILE_0             = StdVideoVP9Profile.STD_VIDEO_VP9_PROFILE_0;
+enum STD_VIDEO_VP9_PROFILE_1             = StdVideoVP9Profile.STD_VIDEO_VP9_PROFILE_1;
+enum STD_VIDEO_VP9_PROFILE_2             = StdVideoVP9Profile.STD_VIDEO_VP9_PROFILE_2;
+enum STD_VIDEO_VP9_PROFILE_3             = StdVideoVP9Profile.STD_VIDEO_VP9_PROFILE_3;
+enum STD_VIDEO_VP9_PROFILE_INVALID       = StdVideoVP9Profile.STD_VIDEO_VP9_PROFILE_INVALID;
+enum STD_VIDEO_VP9_PROFILE_MAX_ENUM      = StdVideoVP9Profile.STD_VIDEO_VP9_PROFILE_MAX_ENUM;
+
+enum StdVideoVP9Level {
+    STD_VIDEO_VP9_LEVEL_1_0      = 0,
+    STD_VIDEO_VP9_LEVEL_1_1      = 1,
+    STD_VIDEO_VP9_LEVEL_2_0      = 2,
+    STD_VIDEO_VP9_LEVEL_2_1      = 3,
+    STD_VIDEO_VP9_LEVEL_3_0      = 4,
+    STD_VIDEO_VP9_LEVEL_3_1      = 5,
+    STD_VIDEO_VP9_LEVEL_4_0      = 6,
+    STD_VIDEO_VP9_LEVEL_4_1      = 7,
+    STD_VIDEO_VP9_LEVEL_5_0      = 8,
+    STD_VIDEO_VP9_LEVEL_5_1      = 9,
+    STD_VIDEO_VP9_LEVEL_5_2      = 10,
+    STD_VIDEO_VP9_LEVEL_6_0      = 11,
+    STD_VIDEO_VP9_LEVEL_6_1      = 12,
+    STD_VIDEO_VP9_LEVEL_6_2      = 13,
+    STD_VIDEO_VP9_LEVEL_INVALID  = 0x7FFFFFFF,
+    STD_VIDEO_VP9_LEVEL_MAX_ENUM = 0x7FFFFFFF
+}
+
+enum STD_VIDEO_VP9_LEVEL_1_0     = StdVideoVP9Level.STD_VIDEO_VP9_LEVEL_1_0;
+enum STD_VIDEO_VP9_LEVEL_1_1     = StdVideoVP9Level.STD_VIDEO_VP9_LEVEL_1_1;
+enum STD_VIDEO_VP9_LEVEL_2_0     = StdVideoVP9Level.STD_VIDEO_VP9_LEVEL_2_0;
+enum STD_VIDEO_VP9_LEVEL_2_1     = StdVideoVP9Level.STD_VIDEO_VP9_LEVEL_2_1;
+enum STD_VIDEO_VP9_LEVEL_3_0     = StdVideoVP9Level.STD_VIDEO_VP9_LEVEL_3_0;
+enum STD_VIDEO_VP9_LEVEL_3_1     = StdVideoVP9Level.STD_VIDEO_VP9_LEVEL_3_1;
+enum STD_VIDEO_VP9_LEVEL_4_0     = StdVideoVP9Level.STD_VIDEO_VP9_LEVEL_4_0;
+enum STD_VIDEO_VP9_LEVEL_4_1     = StdVideoVP9Level.STD_VIDEO_VP9_LEVEL_4_1;
+enum STD_VIDEO_VP9_LEVEL_5_0     = StdVideoVP9Level.STD_VIDEO_VP9_LEVEL_5_0;
+enum STD_VIDEO_VP9_LEVEL_5_1     = StdVideoVP9Level.STD_VIDEO_VP9_LEVEL_5_1;
+enum STD_VIDEO_VP9_LEVEL_5_2     = StdVideoVP9Level.STD_VIDEO_VP9_LEVEL_5_2;
+enum STD_VIDEO_VP9_LEVEL_6_0     = StdVideoVP9Level.STD_VIDEO_VP9_LEVEL_6_0;
+enum STD_VIDEO_VP9_LEVEL_6_1     = StdVideoVP9Level.STD_VIDEO_VP9_LEVEL_6_1;
+enum STD_VIDEO_VP9_LEVEL_6_2     = StdVideoVP9Level.STD_VIDEO_VP9_LEVEL_6_2;
+enum STD_VIDEO_VP9_LEVEL_INVALID = StdVideoVP9Level.STD_VIDEO_VP9_LEVEL_INVALID;
+enum STD_VIDEO_VP9_LEVEL_MAX_ENUM = StdVideoVP9Level.STD_VIDEO_VP9_LEVEL_MAX_ENUM;
+
+enum StdVideoVP9FrameType {
+    STD_VIDEO_VP9_FRAME_TYPE_KEY         = 0,
+    STD_VIDEO_VP9_FRAME_TYPE_NON_KEY     = 1,
+    STD_VIDEO_VP9_FRAME_TYPE_INVALID     = 0x7FFFFFFF,
+    STD_VIDEO_VP9_FRAME_TYPE_MAX_ENUM    = 0x7FFFFFFF
+}
+
+enum STD_VIDEO_VP9_FRAME_TYPE_KEY        = StdVideoVP9FrameType.STD_VIDEO_VP9_FRAME_TYPE_KEY;
+enum STD_VIDEO_VP9_FRAME_TYPE_NON_KEY    = StdVideoVP9FrameType.STD_VIDEO_VP9_FRAME_TYPE_NON_KEY;
+enum STD_VIDEO_VP9_FRAME_TYPE_INVALID    = StdVideoVP9FrameType.STD_VIDEO_VP9_FRAME_TYPE_INVALID;
+enum STD_VIDEO_VP9_FRAME_TYPE_MAX_ENUM   = StdVideoVP9FrameType.STD_VIDEO_VP9_FRAME_TYPE_MAX_ENUM;
+
+enum StdVideoVP9ReferenceName {
+    STD_VIDEO_VP9_REFERENCE_NAME_INTRA_FRAME     = 0,
+    STD_VIDEO_VP9_REFERENCE_NAME_LAST_FRAME      = 1,
+    STD_VIDEO_VP9_REFERENCE_NAME_GOLDEN_FRAME    = 2,
+    STD_VIDEO_VP9_REFERENCE_NAME_ALTREF_FRAME    = 3,
+    STD_VIDEO_VP9_REFERENCE_NAME_INVALID         = 0x7FFFFFFF,
+    STD_VIDEO_VP9_REFERENCE_NAME_MAX_ENUM        = 0x7FFFFFFF
+}
+
+enum STD_VIDEO_VP9_REFERENCE_NAME_INTRA_FRAME    = StdVideoVP9ReferenceName.STD_VIDEO_VP9_REFERENCE_NAME_INTRA_FRAME;
+enum STD_VIDEO_VP9_REFERENCE_NAME_LAST_FRAME     = StdVideoVP9ReferenceName.STD_VIDEO_VP9_REFERENCE_NAME_LAST_FRAME;
+enum STD_VIDEO_VP9_REFERENCE_NAME_GOLDEN_FRAME   = StdVideoVP9ReferenceName.STD_VIDEO_VP9_REFERENCE_NAME_GOLDEN_FRAME;
+enum STD_VIDEO_VP9_REFERENCE_NAME_ALTREF_FRAME   = StdVideoVP9ReferenceName.STD_VIDEO_VP9_REFERENCE_NAME_ALTREF_FRAME;
+enum STD_VIDEO_VP9_REFERENCE_NAME_INVALID        = StdVideoVP9ReferenceName.STD_VIDEO_VP9_REFERENCE_NAME_INVALID;
+enum STD_VIDEO_VP9_REFERENCE_NAME_MAX_ENUM       = StdVideoVP9ReferenceName.STD_VIDEO_VP9_REFERENCE_NAME_MAX_ENUM;
+
+enum StdVideoVP9InterpolationFilter {
+    STD_VIDEO_VP9_INTERPOLATION_FILTER_EIGHTTAP          = 0,
+    STD_VIDEO_VP9_INTERPOLATION_FILTER_EIGHTTAP_SMOOTH   = 1,
+    STD_VIDEO_VP9_INTERPOLATION_FILTER_EIGHTTAP_SHARP    = 2,
+    STD_VIDEO_VP9_INTERPOLATION_FILTER_BILINEAR          = 3,
+    STD_VIDEO_VP9_INTERPOLATION_FILTER_SWITCHABLE        = 4,
+    STD_VIDEO_VP9_INTERPOLATION_FILTER_INVALID           = 0x7FFFFFFF,
+    STD_VIDEO_VP9_INTERPOLATION_FILTER_MAX_ENUM          = 0x7FFFFFFF
+}
+
+enum STD_VIDEO_VP9_INTERPOLATION_FILTER_EIGHTTAP         = StdVideoVP9InterpolationFilter.STD_VIDEO_VP9_INTERPOLATION_FILTER_EIGHTTAP;
+enum STD_VIDEO_VP9_INTERPOLATION_FILTER_EIGHTTAP_SMOOTH  = StdVideoVP9InterpolationFilter.STD_VIDEO_VP9_INTERPOLATION_FILTER_EIGHTTAP_SMOOTH;
+enum STD_VIDEO_VP9_INTERPOLATION_FILTER_EIGHTTAP_SHARP   = StdVideoVP9InterpolationFilter.STD_VIDEO_VP9_INTERPOLATION_FILTER_EIGHTTAP_SHARP;
+enum STD_VIDEO_VP9_INTERPOLATION_FILTER_BILINEAR         = StdVideoVP9InterpolationFilter.STD_VIDEO_VP9_INTERPOLATION_FILTER_BILINEAR;
+enum STD_VIDEO_VP9_INTERPOLATION_FILTER_SWITCHABLE       = StdVideoVP9InterpolationFilter.STD_VIDEO_VP9_INTERPOLATION_FILTER_SWITCHABLE;
+enum STD_VIDEO_VP9_INTERPOLATION_FILTER_INVALID          = StdVideoVP9InterpolationFilter.STD_VIDEO_VP9_INTERPOLATION_FILTER_INVALID;
+enum STD_VIDEO_VP9_INTERPOLATION_FILTER_MAX_ENUM         = StdVideoVP9InterpolationFilter.STD_VIDEO_VP9_INTERPOLATION_FILTER_MAX_ENUM;
+
+enum StdVideoVP9ColorSpace {
+    STD_VIDEO_VP9_COLOR_SPACE_UNKNOWN    = 0,
+    STD_VIDEO_VP9_COLOR_SPACE_BT_601     = 1,
+    STD_VIDEO_VP9_COLOR_SPACE_BT_709     = 2,
+    STD_VIDEO_VP9_COLOR_SPACE_SMPTE_170  = 3,
+    STD_VIDEO_VP9_COLOR_SPACE_SMPTE_240  = 4,
+    STD_VIDEO_VP9_COLOR_SPACE_BT_2020    = 5,
+    STD_VIDEO_VP9_COLOR_SPACE_RESERVED   = 6,
+    STD_VIDEO_VP9_COLOR_SPACE_RGB        = 7,
+    STD_VIDEO_VP9_COLOR_SPACE_INVALID    = 0x7FFFFFFF,
+    STD_VIDEO_VP9_COLOR_SPACE_MAX_ENUM   = 0x7FFFFFFF
+}
+
+enum STD_VIDEO_VP9_COLOR_SPACE_UNKNOWN   = StdVideoVP9ColorSpace.STD_VIDEO_VP9_COLOR_SPACE_UNKNOWN;
+enum STD_VIDEO_VP9_COLOR_SPACE_BT_601    = StdVideoVP9ColorSpace.STD_VIDEO_VP9_COLOR_SPACE_BT_601;
+enum STD_VIDEO_VP9_COLOR_SPACE_BT_709    = StdVideoVP9ColorSpace.STD_VIDEO_VP9_COLOR_SPACE_BT_709;
+enum STD_VIDEO_VP9_COLOR_SPACE_SMPTE_170 = StdVideoVP9ColorSpace.STD_VIDEO_VP9_COLOR_SPACE_SMPTE_170;
+enum STD_VIDEO_VP9_COLOR_SPACE_SMPTE_240 = StdVideoVP9ColorSpace.STD_VIDEO_VP9_COLOR_SPACE_SMPTE_240;
+enum STD_VIDEO_VP9_COLOR_SPACE_BT_2020   = StdVideoVP9ColorSpace.STD_VIDEO_VP9_COLOR_SPACE_BT_2020;
+enum STD_VIDEO_VP9_COLOR_SPACE_RESERVED  = StdVideoVP9ColorSpace.STD_VIDEO_VP9_COLOR_SPACE_RESERVED;
+enum STD_VIDEO_VP9_COLOR_SPACE_RGB       = StdVideoVP9ColorSpace.STD_VIDEO_VP9_COLOR_SPACE_RGB;
+enum STD_VIDEO_VP9_COLOR_SPACE_INVALID   = StdVideoVP9ColorSpace.STD_VIDEO_VP9_COLOR_SPACE_INVALID;
+enum STD_VIDEO_VP9_COLOR_SPACE_MAX_ENUM  = StdVideoVP9ColorSpace.STD_VIDEO_VP9_COLOR_SPACE_MAX_ENUM;
+
+struct StdVideoVP9ColorConfigFlags {
+}
+
+struct StdVideoVP9ColorConfig {
+    StdVideoVP9ColorConfigFlags  flags;
+    uint8_t                      BitDepth;
+    uint8_t                      subsampling_x;
+    uint8_t                      subsampling_y;
+    uint8_t                      reserved1;
+    StdVideoVP9ColorSpace        color_space;
+}
+
+struct StdVideoVP9LoopFilterFlags {
+}
+
+struct StdVideoVP9LoopFilter {
+    StdVideoVP9LoopFilterFlags                       flags;
+    uint8_t                                          loop_filter_level;
+    uint8_t                                          loop_filter_sharpness;
+    uint8_t                                          update_ref_delta;
+    int8_t[ STD_VIDEO_VP9_MAX_REF_FRAMES ]           loop_filter_ref_deltas;
+    uint8_t                                          update_mode_delta;
+    int8_t[ STD_VIDEO_VP9_LOOP_FILTER_ADJUSTMENTS ]  loop_filter_mode_deltas;
+}
+
+struct StdVideoVP9SegmentationFlags {
+}
+
+struct StdVideoVP9Segmentation {
+    StdVideoVP9SegmentationFlags                          flags;
+    uint8_t[ STD_VIDEO_VP9_MAX_SEGMENTATION_TREE_PROBS ]  segmentation_tree_probs;
+    uint8_t[ STD_VIDEO_VP9_MAX_SEGMENTATION_PRED_PROB ]   segmentation_pred_prob;
+    uint8_t[ STD_VIDEO_VP9_MAX_SEGMENTS ]                 FeatureEnabled;
+    int16_t[ STD_VIDEO_VP9_MAX_SEGMENTS ]                 FeatureData;
+}
+
+
+// - vulkan_video_codec_vp9std_decode -
+enum vulkan_video_codec_vp9std_decode = 1;
+
+enum VK_STD_VULKAN_VIDEO_CODEC_VP9_DECODE_API_VERSION_1_0_0 = VK_MAKE_VIDEO_STD_VERSION( 1, 0, 0 );
+
+enum VK_STD_VULKAN_VIDEO_CODEC_VP9_DECODE_SPEC_VERSION = VK_STD_VULKAN_VIDEO_CODEC_VP9_DECODE_API_VERSION_1_0_0;
+enum const( char )* VK_STD_VULKAN_VIDEO_CODEC_VP9_DECODE_EXTENSION_NAME = "VK_STD_vulkan_video_codec_vp9_decode";
+
+struct StdVideoDecodeVP9PictureInfoFlags {
+}
+
+struct StdVideoDecodeVP9PictureInfo {
+    StdVideoDecodeVP9PictureInfoFlags  flags;
+    StdVideoVP9Profile                 profile;
+    StdVideoVP9FrameType               frame_type;
+    uint8_t                            frame_context_idx;
+    uint8_t                            reset_frame_context;
+    uint8_t                            refresh_frame_flags;
+    uint8_t                            ref_frame_sign_bias_mask;
+    StdVideoVP9InterpolationFilter     interpolation_filter;
+    uint8_t                            base_q_idx;
+    int8_t                             delta_q_y_dc;
+    int8_t                             delta_q_uv_dc;
+    int8_t                             delta_q_uv_ac;
+    uint8_t                            tile_cols_log2;
+    uint8_t                            tile_rows_log2;
+    uint16_t[3]                        reserved1;
+    const( StdVideoVP9ColorConfig )*   pColorConfig;
+    const( StdVideoVP9LoopFilter )*    pLoopFilter;
+    const( StdVideoVP9Segmentation )*  pSegmentation;
 }
 
 
